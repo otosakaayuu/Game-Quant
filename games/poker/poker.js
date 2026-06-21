@@ -286,7 +286,7 @@ function cardEl(card, faceUp, big) {
   const isRed = card.s === 'h' || card.s === 'd';
   div.className = `card ${isRed ? 'red' : 'black'}${big ? ' big' : ''}`;
   const suitChar = { s: '♠', h: '♥', d: '♦', c: '♣' }[card.s];
-  div.innerHTML = `<div>${P.rankChar(card.r)}</div><div>${suitChar}</div>`;
+  div.innerHTML = `<div class="r">${P.rankChar(card.r)}</div><div class="s">${suitChar}</div>`;
   return div;
 }
 
@@ -297,30 +297,45 @@ function render() {
     const seatEl = document.getElementById(`seat-${i}`);
     seatEl.innerHTML = '';
     const card = document.createElement('div');
-    card.className = 'seat-card' + (p.folded ? ' folded' : '') + (acting && roundQueue[0] === i ? ' active-turn' : '');
-    const nameDiv = document.createElement('div');
-    nameDiv.className = 'name';
-    nameDiv.innerHTML = (i === dealerSeat ? '<span class="dealer-chip">D</span>' : '') + p.name;
+    card.className = 'seat-card' + (p.folded ? ' folded' : '') + (p.isHuman ? ' you-seat' : '') + (acting && roundQueue[0] === i ? ' active-turn' : '');
+
+    const nameRow = document.createElement('div');
+    nameRow.className = 'name-row';
+    const avatar = document.createElement('span');
+    avatar.className = 'avatar';
+    avatar.textContent = p.isHuman ? 'Y' : p.name.replace('Bot ', '')[0];
+    nameRow.appendChild(avatar);
+    if (i === dealerSeat) { const d = document.createElement('span'); d.className = 'dealer-chip'; d.textContent = 'D'; nameRow.appendChild(d); }
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'name';
+    nameSpan.textContent = p.name;
+    nameRow.appendChild(nameSpan);
+
     const stackDiv = document.createElement('div');
     stackDiv.className = 'stack';
     stackDiv.textContent = p.stack + ' chips';
-    const betDiv = document.createElement('div');
-    betDiv.className = 'bet';
-    betDiv.textContent = p.roundBet > 0 ? `bet ${p.roundBet}` : '';
+
+    const betRow = document.createElement('div');
+    betRow.className = 'bet-row';
+    if (p.roundBet > 0) betRow.appendChild(chipStackEl(p.roundBet));
+
     const actionDiv = document.createElement('div');
-    actionDiv.className = 'action-tag';
-    actionDiv.textContent = p.lastAction || '';
+    actionDiv.className = 'action-tag' + (p.lastAction && /call|check|bet|raise|all-in/i.test(p.lastAction) ? ' positive' : '');
+    actionDiv.textContent = p.folded ? '' : (p.lastAction || '');
+
     const holeDiv = document.createElement('div');
     holeDiv.className = 'hole-cards';
     if (p.hole.length) {
       const faceUp = p.isHuman || revealAll && !p.folded;
       for (const c of p.hole) holeDiv.appendChild(cardEl(c, faceUp, false));
     }
-    card.appendChild(nameDiv);
+
+    card.appendChild(nameRow);
     card.appendChild(stackDiv);
-    card.appendChild(betDiv);
+    card.appendChild(betRow);
     card.appendChild(holeDiv);
     card.appendChild(actionDiv);
+    if (p.folded) { const stamp = document.createElement('div'); stamp.className = 'fold-stamp'; stamp.textContent = 'Folded'; card.appendChild(stamp); }
     seatEl.appendChild(card);
   }
 
@@ -331,7 +346,7 @@ function render() {
   document.getElementById('potLabel').textContent = `Pot: ${totalPot()} chips`;
 
   // result + log
-  resultEl.textContent = resultText;
+  resultEl.innerHTML = resultText ? `<span class="banner">${resultText}</span>` : '';
   logEl.innerHTML = handLog.map((l) => `<div>${l}</div>`).join('');
   logEl.scrollTop = logEl.scrollHeight;
 
@@ -358,6 +373,21 @@ function render() {
   }
 
   renderEquity();
+}
+
+function chipStackEl(amount) {
+  const wrap = document.createElement('div');
+  wrap.className = 'chip-stack';
+  const icons = document.createElement('div');
+  icons.className = 'chip-icons';
+  const n = Math.min(4, Math.max(1, Math.ceil(amount / 50)));
+  for (let i = 0; i < n; i++) { const c = document.createElement('span'); c.className = 'c'; icons.appendChild(c); }
+  const amt = document.createElement('span');
+  amt.className = 'amt';
+  amt.textContent = amount;
+  wrap.appendChild(icons);
+  wrap.appendChild(amt);
+  return wrap;
 }
 
 function renderEquity() {
