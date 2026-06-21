@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Shogi — The Odds Room</title>
+<link rel="stylesheet" href="../../style.css" />
+<link rel="stylesheet" href="shogi.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <header class="site-header">
+    <a class="wordmark" href="../../index.html">The Odds Room<span class="dot">.</span></a>
+    <a class="back-link" href="../../index.html">&larr; all games</a>
+  </header>
+
+  <main class="game-wrap">
+    <section class="board-area">
+      <div class="title-block">
+        <span class="eyebrow">Tactical foresight</span>
+        <h1>Shogi</h1>
+        <p>Captured pieces switch sides and return to the board — every exchange changes both players' options. Tap a piece in hand to drop it.</p>
+      </div>
+      <div class="panel turn-banner" id="turnBanner">
+        <span class="turn-dot" id="turnDot"></span>
+        <span id="statusText"></span>
+      </div>
+      <div id="handTop" class="hand-row"></div>
+      <div class="board-shell">
+        <div id="board" class="board"></div>
+      </div>
+      <div id="handBottom" class="hand-row"></div>
+    </section>
+
+    <aside class="side-panel">
+      <div class="panel">
+        <div class="field">
+          <label>Play as</label>
+          <div class="seg" id="colorSeg">
+            <button class="active" data-color="b">Sente (first)</button>
+            <button data-color="w">Gote (second)</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Computer strength</label>
+          <div class="seg" id="diffSeg">
+            <button data-depth="1">Easy</button>
+            <button class="active" data-depth="2">Medium</button>
+            <button data-depth="3">Hard</button>
+          </div>
+        </div>
+        <button class="btn" id="newGameBtn" style="width:100%; justify-content:center;">New game</button>
+      </div>
+      <div class="panel">
+        <div class="field" style="margin-bottom:8px;"><label>Move log</label></div>
+        <div id="moveLog" class="move-log"></div>
+      </div>
+    </aside>
+  </main>
+
+  <script src="shogi-engine.js"></script>
+  <script src="shogi.js"></script>
+</body>
+</html>
