@@ -27,9 +27,13 @@ let lastSummary = null;
 const playersRowEl = document.getElementById('playersRow');
 const marketGridEl = document.getElementById('marketGrid');
 const timerEl = document.getElementById('timer');
+const timerRingEl = document.getElementById('timerRing');
+const timerProgressEl = document.getElementById('timerProgress');
 const startBtn = document.getElementById('startBtn');
 const revealPanelEl = document.getElementById('revealPanel');
 const logEl = document.getElementById('logPanel');
+const RING_CIRCUMFERENCE = 2 * Math.PI * 26;
+timerProgressEl.style.strokeDasharray = `${RING_CIRCUMFERENCE}`;
 
 function initPlayers() {
   players = NAMES.map((name, i) => ({ idx: i, name, isHuman: i === 0, chips: START_CHIPS, hand: [] }));
@@ -197,7 +201,11 @@ function botActOnce(playerIdx, pers) {
 // ---------- rendering ----------
 function render() {
   timerEl.textContent = roundActive ? `${String(Math.floor(timeLeft / 60)).padStart(1, '0')}:${String(timeLeft % 60).padStart(2, '0')}` : revealed ? 'Round over' : 'Ready';
-  timerEl.classList.toggle('urgent', roundActive && timeLeft <= 15);
+  const urgent = roundActive && timeLeft <= 15;
+  timerEl.classList.toggle('urgent', urgent);
+  timerRingEl.classList.toggle('urgent', urgent);
+  const frac = roundActive ? Math.max(0, timeLeft / ROUND_SECONDS) : revealed ? 0 : 1;
+  timerProgressEl.style.strokeDashoffset = `${RING_CIRCUMFERENCE * (1 - frac)}`;
   startBtn.textContent = revealed || (!roundActive && timeLeft === 0 && players[0].hand.length === 0) ? (log.length ? 'Next round' : 'Start round') : 'Start round';
   startBtn.disabled = roundActive;
 
@@ -205,7 +213,8 @@ function render() {
   for (const p of players) {
     const div = document.createElement('div');
     div.className = 'player-chip panel' + (p.isHuman ? ' you' : '');
-    div.innerHTML = `<div class="pname">${p.name}</div><div>${p.chips} chips</div><div>${p.hand.length} cards${p.isHuman ? '' : ' (hidden)'}</div>`;
+    const initial = p.isHuman ? 'Y' : p.name.replace('Bot ', '')[0];
+    div.innerHTML = `<div class="pname"><span class="avatar">${initial}</span>${p.name}</div><div class="chips-val">${p.chips} chips</div><div>${p.hand.length} cards${p.isHuman ? '' : ' (hidden)'}</div>`;
     playersRowEl.appendChild(div);
   }
 
@@ -217,22 +226,31 @@ function render() {
     const book = market[suit];
     const card = document.createElement('div');
     card.className = 'suit-card panel';
+    const myCards = human.hand.filter((s) => s === suit);
+    const miniCards = myCards.map(() => `<div class="mini-card ${color}">${F.SUIT_SYMBOL[suit]}</div>`).join('');
     card.innerHTML = `
-      <div class="suit-head">
-        <span class="suit-glyph ${color}">${F.SUIT_SYMBOL[suit]}</span>
-        <span class="suit-name">${F.SUIT_NAME[suit]}</span>
-        <span class="my-count">you hold ${myCounts[suit]}</span>
-      </div>
-      <div class="book-row"><span class="bid">bid ${book.bid ? book.bid.price : '—'}</span><span class="ask">ask ${book.ask ? book.ask.price : '—'}</span></div>
-      <div class="suit-actions">
-        <button class="btn secondary" data-act="buy" data-suit="${suit}" ${!roundActive || !book.ask || book.ask.playerIdx === 0 ? 'disabled' : ''}>Buy</button>
-        <button class="btn secondary" data-act="sell" data-suit="${suit}" ${!roundActive || !book.bid || book.bid.playerIdx === 0 || myCounts[suit] === 0 ? 'disabled' : ''}>Sell</button>
-      </div>
-      <div class="post-row">
-        <input type="number" min="1" max="${human.chips}" value="${book.bid && book.bid.playerIdx===0 ? book.bid.price : 8}" data-bidinput="${suit}" ${!roundActive ? 'disabled' : ''}/>
-        <button class="btn secondary" data-act="postbid" data-suit="${suit}" ${!roundActive ? 'disabled' : ''}>Bid</button>
-        <input type="number" min="1" value="${book.ask && book.ask.playerIdx===0 ? book.ask.price : 12}" data-askinput="${suit}" ${!roundActive || myCounts[suit] === 0 ? 'disabled' : ''}/>
-        <button class="btn secondary" data-act="postask" data-suit="${suit}" ${!roundActive || myCounts[suit] === 0 ? 'disabled' : ''}>Ask</button>
+      <div class="suit-accent ${color}"></div>
+      <div class="suit-card-inner">
+        <div class="suit-head">
+          <span class="suit-glyph ${color}">${F.SUIT_SYMBOL[suit]}</span>
+          <span class="suit-name">${F.SUIT_NAME[suit]}</span>
+          <span class="my-count">you hold ${myCounts[suit]}</span>
+        </div>
+        <div class="my-hand-mini">${miniCards}</div>
+        <div class="book-row">
+          <div class="book-pill bid"><span class="lbl">Bid</span><span class="val">${book.bid ? book.bid.price : '—'}</span></div>
+          <div class="book-pill ask"><span class="lbl">Ask</span><span class="val">${book.ask ? book.ask.price : '—'}</span></div>
+        </div>
+        <div class="suit-actions">
+          <button class="btn secondary" data-act="buy" data-suit="${suit}" ${!roundActive || !book.ask || book.ask.playerIdx === 0 ? 'disabled' : ''}>Buy</button>
+          <button class="btn secondary" data-act="sell" data-suit="${suit}" ${!roundActive || !book.bid || book.bid.playerIdx === 0 || myCounts[suit] === 0 ? 'disabled' : ''}>Sell</button>
+        </div>
+        <div class="post-row">
+          <input type="number" min="1" max="${human.chips}" value="${book.bid && book.bid.playerIdx===0 ? book.bid.price : 8}" data-bidinput="${suit}" ${!roundActive ? 'disabled' : ''}/>
+          <button class="btn secondary" data-act="postbid" data-suit="${suit}" ${!roundActive ? 'disabled' : ''}>Bid</button>
+          <input type="number" min="1" value="${book.ask && book.ask.playerIdx===0 ? book.ask.price : 12}" data-askinput="${suit}" ${!roundActive || myCounts[suit] === 0 ? 'disabled' : ''}/>
+          <button class="btn secondary" data-act="postask" data-suit="${suit}" ${!roundActive || myCounts[suit] === 0 ? 'disabled' : ''}>Ask</button>
+        </div>
       </div>
     `;
     marketGridEl.appendChild(card);
@@ -261,9 +279,23 @@ function render() {
     for (let i = 0; i < players.length; i++) {
       rows += `<tr><td>${players[i].name}${result.bonusWinners.includes(i) ? ' 🏆' : ''}</td><td>${holdings[i]}</td><td>${result.payouts[i]}</td></tr>`;
     }
+    const maxCount = 12;
+    let bars = '';
+    for (const suit of F.SUITS) {
+      const n = trueCounts[suit];
+      const kind = suit === goalSuit ? 'goal' : suit === shortSuit ? 'short' : 'mid';
+      const heightPct = Math.round((n / maxCount) * 100);
+      bars += `
+        <div class="deck-bar-col">
+          <span class="count ${kind === 'goal' ? 'goal' : ''}">${n}</span>
+          <div class="deck-bar-track"><div class="deck-bar-fill ${kind}" style="height:${heightPct}%"></div></div>
+          <span class="glyph ${F.suitColor(suit)}">${F.SUIT_SYMBOL[suit]}</span>
+        </div>`;
+    }
     revealPanelEl.innerHTML = `
       <h3>Goal suit: ${F.SUIT_SYMBOL[goalSuit]} ${F.SUIT_NAME[goalSuit]} — 12 in the deck</h3>
-      <p style="color:var(--chalk-dim); font-family:var(--mono); font-size:0.85rem;">Short suit was ${F.SUIT_SYMBOL[shortSuit]} ${F.SUIT_NAME[shortSuit]} (8 in the deck). Deck: S${trueCounts.S} C${trueCounts.C} H${trueCounts.H} D${trueCounts.D}. Majority bonus (${result.bonusPot} chips) goes to whoever held the most goal-suit cards.</p>
+      <p style="color:var(--chalk-dim); font-family:var(--mono); font-size:0.85rem;">Short suit was ${F.SUIT_SYMBOL[shortSuit]} ${F.SUIT_NAME[shortSuit]} (8 in the deck). Majority bonus (${result.bonusPot} chips) goes to whoever held the most goal-suit cards.</p>
+      <div class="deck-bars">${bars}</div>
       <table class="payout-table"><thead><tr><th>Player</th><th>Goal cards held</th><th>Payout</th></tr></thead><tbody>${rows}</tbody></table>
     `;
   } else {
